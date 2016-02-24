@@ -5,6 +5,8 @@
 % Baston S, Waldman S & Side J (2014) “Modelling energy extraction in tidal flows”, Position Paper, 
 %   output of the TeraWatt UKCMER Grand Challenge project. Rev. 3.1 issued 2015. Available at http://www.masts.ac.uk/about/masts-publications/terawatt-publications/
 
+% The latest version of this script is available at The latest version may be found at https://github.com/TeraWatt-EcoWatt2050/D3D_add_turbines.
+
 % Copyright Simon Waldman / Heriot-Watt University, 2014-2015
 
 %% Variables

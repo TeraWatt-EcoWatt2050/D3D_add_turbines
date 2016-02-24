@@ -21,7 +21,7 @@ Limitations:
     is rectangular, but allows for the size of that rectangle to be different across the domain. Be careful
     with very large cells, or with very high latitudes.
 
-Improvements to this script are welcome.
+Improvements to this script are welcome. The latest version may be found at https://github.com/TeraWatt-EcoWatt2050/D3D_add_turbines.
 
 -Simon Waldman.
 
