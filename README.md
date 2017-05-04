@@ -12,8 +12,8 @@ If you use it in a project that leads to a report or publication I would
 appreciate (a) knowing about it; (b) acknowledgement; and, if appropriate, a citation for the following paper
 for which it was developed:
 
-Waldman S, Baston S, Nemalidinne R, Chatzirodou A, Venugopal V, Side J, “Implementation of tidal turbines in MIKE 3 and Delft3D models of 
-Pentland Firth & Orkney Waters” (in prep)
+Waldman S, Baston S, Nemalidinne R, Chatzirodou A, Venugopal V, Side J, “Implementation of tidal turbines in MIKE 3 and Delft3D models of Pentland Firth & Orkney Waters” (2017)
+Ocean & Coastal Management. http://dx.doi.org/10.1016/j.ocecoaman.2017.04.015
 
 Limitations:
 - Only valid for rectilinear grids in lat/lon coordinates (that is, rectilinear if unprojected)
