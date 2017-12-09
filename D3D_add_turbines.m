@@ -1,4 +1,4 @@
-% Produce porous plate definition file for Delft3D-Flow to represent tidal turbines. Requires
+%adding something different here to make a merge happen% Produce porous plate definition file for Delft3D-Flow to represent tidal turbines. Requires
 % Delft3D-MATLAB toolbox.
 
 % Further information on this implementation is available in:
