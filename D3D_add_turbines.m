@@ -1,50 +1,37 @@
-% Produce porous plate definition file for Delft3D-Flow to represent tidal turbines. Requires
+% Insert tidal turbine representations into delft3D model. Requires
 % Delft3D-MATLAB toolbox.
-
-% Further information on this implementation is available in:
-% Baston S, Waldman S & Side J (2014) “Modelling energy extraction in tidal flows”, Position Paper, 
-%   output of the TeraWatt UKCMER Grand Challenge project. Rev. 3.1 issued 2015. Available at http://www.masts.ac.uk/about/masts-publications/terawatt-publications/
-
-% The latest version of this script is available at The latest version may be found at https://github.com/TeraWatt-EcoWatt2050/D3D_add_turbines.
-
-% Copyright Simon Waldman / Heriot-Watt University, 2014-2015
+%Initial bodgy script by Simon Waldman, Jan 2015.
 
 %% Variables
 
-UseCorrection = false;   % whether to correct for free-stream vs cell velocity. This is only an approximation, and experimental; little teseting has thus far been done.
-% For info on the effect that this aims to correct for, see: Waldman S, Genet G, Baston S and Side J (2015) "Correcting for mesh size dependency 
-% in a regional model’s representation of tidal turbines". EWTEC conference 2015. Available at: http://www.simonwaldman.me.uk/publications/2015/EWTEC_Correcting_for_mesh_size_dep.pdf
+UseCorrection = false;   % whether to correct for free-stream vs cell velocity. This is only an approximation, and is untested in arrays.
 
 TurbineInfoFile = 'all_longlat.csv'; %csv file as described in fnReadTurbinesFile.m
 TurbineFileSkip = 1; %lines of header to skip in this file.
 
-BathyFile = 'W:\temp\initial bed level.mat';    %.mat file exported from Quickplot "initial bed level", using an output of the model without turbines
-VelocityFile = 'W:\temp\depth averaged velocity.mat'; %.mat file exported from Quickplot "depth averaged velocity", using an output of the model without turbines.
+BathyFile = 'D:\temp\initial bed level.mat';    %.mat file exported from Quickplot "initial bed level", using an output of the model without turbines
+VelocityFile = 'D:\temp\depth averaged velocity.mat'; %.mat file exported from Quickplot "depth averaged velocity", using an output of the model without turbines.
 % unless turbine orientations are set in the CSV TurbineInfo file, they
-% will be set from this file using the moment of peak velocity in each cell. NB
-% use a short period around springs, don't try to use entire runs...
+% will be set from this using the moment of peak velocity in each cell. NB
+% use a short period around springs, don't try to export entire runs...
 % 1000 time steps is already pushing things on a largeish grid, unless you
-% have lots of RAM, and unless your site has radically different directions
-% at different times of the month, you only really need one tidal cycle.
+% have lots of RAM.
 
-OutputFilename = '1000_turbines.ppl';
+OutputFilename = '1000_turbines_uncorr_rightdepths.ppl';
 
 %grid info
 GridFile = 'Orkney.grd';    % D3D grid file.
 NumLayers = 10; % sigma layers in model
 
 % Turbine specs
-Ct = 0.85;  % sadly this must be fixed, for there is no way for a porous plate to change its porosity between time steps.
+Ct = 0.85;
 Diameter = 20;  %metres.
-RotorArea = (Diameter / 2)^2 * pi;
 
 % Other
-TidalRange = 4;     %metres. The rotor will be kept half of this value beneath MSL. (assuming MSL is the model datum)
+TidalRange = 4;     %metres. The rotor will be kept half of this value beneath MSL.
 
-% Output guessed turbine orientations? (this can be useful if you need this for something
-% else, e.g. using the same orientations for comparison in another model)
-OutputOrientations = false;
-OrientationOutputFilename = 'D:\temp\orientations.txt'; %this will simply be a 1-column list of headings of turbines, in radians clockwise from north
+%derived stuff
+RotorArea = (Diameter / 2)^2 * pi;
 
 %% Read turbine info
 
@@ -61,8 +48,9 @@ G = wlgrid('read', GridFile);
 %% Find the grid cell that each turbine lies in
 
 disp('Finding grid cells for turbines...');
-[ TurbineList.M, TurbineList.N ] = fnFindGridsCellForPoints(G.X, G.Y, TurbineList.x, TurbineList.y);
+[ TurbineList.M, TurbineList.N ] = fnFindGridCellsForPoints(G.X, G.Y, TurbineList.x, TurbineList.y);
 % The fnFindGrdsCellForPoints function is only valid for rectilinear grids
+% - but this is rectilinear in spherical coords.
 
 %% Read the bathymetry
 
@@ -80,10 +68,12 @@ disp('Finding grid cells for turbines...');
    end
    
    for t = 1:NumTurbines        %loop through turbinelist.
-       m = TurbineList.N(t);
-       n = TurbineList.M(t);
+%        m = TurbineList.N(t);
+%        n = TurbineList.M(t);  %THIS WAS WRONG! There's no need to swap
+%                               m and n.
        
-       CellBathy = data.Val(m,n);
+%        CellBathy = data.Val(m,n);
+       CellBathy = data.Val(TurbineList.M(t),TurbineList.N(t));
        TurbineList.Bathy(t) = CellBathy;
        
        z = CellBathy + TurbineList.dz(t);   % dz should be distance from the seabed.
@@ -100,10 +90,12 @@ disp('Finding grid cells for turbines...');
 
 
 %% If we haven't been provided orientations for the turbines, guess at them from the direction of peak flow
+% NB I think this will give incorrect angles if the M and N grid axes do
+% not align with east and north.
 
 if isempty(TurbineList.o)
     disp('Loading VelocityFile and guessing at turbine orientations...');
-    load(VelocityFile); %this may be big, and hence slow.
+    load(VelocityFile); %this may be big. Havne't tried with anything really big yet.
     if ~exist('data', 'var')
         error('Error reading VelocityFile.');
     end
@@ -115,22 +107,10 @@ if isempty(TurbineList.o)
     end
     TurbineList.o = fnGuessTurbineOrientations(TurbineList.M, TurbineList.N, data.XComp, data.YComp);    
     clear('data');  %get rid of that rather large dataset that we don't need any more.
-else %  if we have orientations given in the CSV.
+else % ie if we have orientations given in the CSV.
     disp('Using turbine orientations from CSV...');
     TurbineList.o = TurbineList.o * 2 * pi / 360;   %convert degrees in the CSV to radians.
 end
-
-if OutputOrientations       %if we want an output of these orientations
-    FID = fopen(OrientationOutputFilename, 'w');
-    if FID==-1
-        error('Could not open orientation output file.');
-    end
-    for l = 1:length(TurbineList.o)
-        fprintf(FID, '%6.4f\n', TurbineList.o(l));
-    end
-    fclose(FID);
-end
-
 
 %% Set turbine-related drag coeff for each cell in each direction
 
@@ -144,7 +124,7 @@ Ax = zeros(xDim, yDim);  %preallocate arrays for rotor effective areas.
 Ay = zeros(xDim, yDim);  % these are the total area of rotor in the horizontal cell *over the full vertical height* that shows when viewed in the x and y directions.
 Layers = cell(xDim, yDim);  %the layers that turbines in this cell occupy
 HasTurbines = false(xDim, yDim);    %logical matrix showing which cells have turbines in
-NuX = zeros(xDim,yDim); % for explanation of nu and how this relates to Closs, see Waldman S, Genet G, Baston S and Side J (2015) “Correcting for mesh size dependency in a regional model’s representation of tidal turbines”. EWTEC conference 2015. Available at: http://www.simonwaldman.me.uk/publications/2015/EWTEC_Correcting_for_mesh_size_dep.pdf
+NuX = zeros(xDim,yDim); % see position paper for explanation of nu and how this relates to Closs (FIXME CITATION)
 NuY = zeros(xDim,yDim);
 Clossx = zeros(xDim,yDim);
 Clossy = zeros(xDim,yDim);
@@ -152,9 +132,11 @@ tooshallow = 0;
 for m = 1:xDim
     for n = 1:yDim
         cellNo = (m-1)*yDim + n;
+        %fprintf('Working on cell %i of %i (%.2f%%). ', cellNo, numCells, (cellNo/numCells * 100));
         %find which (if any) turbines are in this cell.
         TinC = find(TurbineList.M==m & TurbineList.N==n)';  % yay for random transpositions necessary to make matlab behave. Without this, the for loop in a few lines doesn't work.
-        if ~isempty(TinC) % if there are turbine(s) in this cell
+        %fprintf('%i turbines in cell.\n', length(TinC));
+        if ~isempty(TinC) % if there are turbine(s) in this cell (this if may be unnecessary - could leave it to a for loop that never executes)
             HasTurbines(m,n) = true;
             for t = TinC
                 % we want to calculate the total "effective area" of rotor
@@ -182,6 +164,9 @@ for m = 1:xDim
             
             %We need to know DeltaX and DeltaY in *metres* - which varies
             %across the grid because it's in spherical coordinates. 
+            %This would be so much easier if
+            %we had the Mapping Toolbox!!! Fortunately I found the
+            %functions to do it on the internet ;-)
             DeltaLon = abs(G.X(m,n) - G.X(m+1,n));
             DeltaX = fnLonToM(DeltaLon, G.Y(m,n));
             DeltaLat = abs(G.Y(m,n) - G.Y(m,n+1));
@@ -189,7 +174,7 @@ for m = 1:xDim
             
             if UseCorrection % do we correct for free-stream vs cell velocity?
                 
-                %Calculate the value nu (see citation above for details)
+                %Calculate the value nu (see position paper for details)
                 
                 NuX(m,n) = (Ct * Ax(m,n) ) / (DeltaY * DeltaZ * length(Layers{m,n}));  %layers taken into account to split total area of rotors into area per vertical cell covered.
                 NuY(m,n) = (Ct * Ay(m,n) ) / (DeltaX * DeltaZ * length(Layers{m,n}));
@@ -229,8 +214,6 @@ fclose(FID);
 disp('Done!');
 
 %% Plot the horizontal locations of the porous plates
-% this is a bit of a bodge and may not be fully accurate - but it gives a
-% good impression for sanity-checking.
 
 siz = [xDim yDim];
 f = figure;
@@ -243,7 +226,7 @@ for c = (find(HasTurbines))'
     xcolno = round(100 * Clossx(m,n) / maxCloss) + 1;
     line([m m], [n n+1], 'color', cm(xcolno,:));
     ycolno = round(100 * Clossy(m,n) / maxCloss) + 1;
-    line([m m+1], [n n], 'color', cm(ycolno,:));
+    line([m m+1], [n n], 'color', cm(ycolno,:), 'LineWidth', 1);
 end
 colormap(cm);
 cb = colorbar;
