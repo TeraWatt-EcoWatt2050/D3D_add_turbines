@@ -1,4 +1,4 @@
-%adding something different here to make a merge happen% Produce porous plate definition file for Delft3D-Flow to represent tidal turbines. Requires
+% Produce porous plate definition file for Delft3D-Flow to represent tidal turbines. Requires
 % Delft3D-MATLAB toolbox.
 
 % Further information on this implementation is available in:
@@ -7,19 +7,19 @@
 
 % The latest version of this script is available at The latest version may be found at https://github.com/TeraWatt-EcoWatt2050/D3D_add_turbines.
 
-% Copyright Simon Waldman / Heriot-Watt University, 2014-2015
+% Copyright Simon Waldman / Heriot-Watt University, 2014-2017
 
 %% Variables
 
-UseCorrection = false;   % whether to correct for free-stream vs cell velocity. This is only an approximation, and experimental; little teseting has thus far been done.
+UseCorrection = false;   % whether to correct for free-stream vs cell velocity. This is only an approximation, and experimental; little testing has thus far been done.
 % For info on the effect that this aims to correct for, see: Waldman S, Genet G, Baston S and Side J (2015) "Correcting for mesh size dependency 
 % in a regional model’s representation of tidal turbines". EWTEC conference 2015. Available at: http://www.simonwaldman.me.uk/publications/2015/EWTEC_Correcting_for_mesh_size_dep.pdf
 
 TurbineInfoFile = 'all_longlat.csv'; %csv file as described in fnReadTurbinesFile.m
 TurbineFileSkip = 1; %lines of header to skip in this file.
 
-BathyFile = 'W:\temp\initial bed level.mat';    %.mat file exported from Quickplot "initial bed level", using an output of the model without turbines
-VelocityFile = 'W:\temp\depth averaged velocity.mat'; %.mat file exported from Quickplot "depth averaged velocity", using an output of the model without turbines.
+BathyFile = 'D:\temp\initial bed level.mat';    %.mat file exported from Quickplot "initial bed level", using an output of the model without turbines
+VelocityFile = 'D:\temp\depth averaged velocity.mat'; %.mat file exported from Quickplot "depth averaged velocity", using an output of the model without turbines.
 % unless turbine orientations are set in the CSV TurbineInfo file, they
 % will be set from this file using the moment of peak velocity in each cell. NB
 % use a short period around springs, don't try to use entire runs...
@@ -27,7 +27,7 @@ VelocityFile = 'W:\temp\depth averaged velocity.mat'; %.mat file exported from Q
 % have lots of RAM, and unless your site has radically different directions
 % at different times of the month, you only really need one tidal cycle.
 
-OutputFilename = '1000_turbines.ppl';
+OutputFilename = '1000_turbines_uncorr_rightdepths.ppl';
 
 %grid info
 GridFile = 'Orkney.grd';    % D3D grid file.
@@ -36,7 +36,7 @@ NumLayers = 10; % sigma layers in model
 % Turbine specs
 Ct = 0.85;  % sadly this must be fixed, for there is no way for a porous plate to change its porosity between time steps.
 Diameter = 20;  %metres.
-RotorArea = (Diameter / 2)^2 * pi;
+
 
 % Other
 TidalRange = 4;     %metres. The rotor will be kept half of this value beneath MSL. (assuming MSL is the model datum)
@@ -45,6 +45,9 @@ TidalRange = 4;     %metres. The rotor will be kept half of this value beneath M
 % else, e.g. using the same orientations for comparison in another model)
 OutputOrientations = false;
 OrientationOutputFilename = 'D:\temp\orientations.txt'; %this will simply be a 1-column list of headings of turbines, in radians clockwise from north
+
+%derived stuff
+RotorArea = (Diameter / 2)^2 * pi;
 
 %% Read turbine info
 
@@ -61,7 +64,7 @@ G = wlgrid('read', GridFile);
 %% Find the grid cell that each turbine lies in
 
 disp('Finding grid cells for turbines...');
-[ TurbineList.M, TurbineList.N ] = fnFindGridsCellForPoints(G.X, G.Y, TurbineList.x, TurbineList.y);
+[ TurbineList.M, TurbineList.N ] = fnFindGridCellsForPoints(G.X, G.Y, TurbineList.x, TurbineList.y);
 % The fnFindGrdsCellForPoints function is only valid for rectilinear grids
 
 %% Read the bathymetry
@@ -80,10 +83,12 @@ disp('Finding grid cells for turbines...');
    end
    
    for t = 1:NumTurbines        %loop through turbinelist.
-       m = TurbineList.N(t);
-       n = TurbineList.M(t);
+%        m = TurbineList.N(t);
+%        n = TurbineList.M(t);  %THIS WAS WRONG! There's no need to swap
+%                               m and n.
        
-       CellBathy = data.Val(m,n);
+%        CellBathy = data.Val(m,n);
+       CellBathy = data.Val(TurbineList.M(t),TurbineList.N(t));
        TurbineList.Bathy(t) = CellBathy;
        
        z = CellBathy + TurbineList.dz(t);   % dz should be distance from the seabed.
@@ -100,6 +105,8 @@ disp('Finding grid cells for turbines...');
 
 
 %% If we haven't been provided orientations for the turbines, guess at them from the direction of peak flow
+% NB I think this will give incorrect angles if the M and N grid axes do
+% not align with east and north.
 
 if isempty(TurbineList.o)
     disp('Loading VelocityFile and guessing at turbine orientations...');
