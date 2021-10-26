@@ -5,14 +5,14 @@ This script takes a CSV file of turbine locations and produces a .ppl file of po
 specifications for Delft3D-Flow.
 
 Further information on this implementation is available in:
-Baston S, Waldman S & Side J (2014) ìModelling energy extraction in tidal flowsî, Position Paper, 
+Baston S, Waldman S & Side J (2014) ‚ÄúModelling energy extraction in tidal flows‚Äù, Position Paper, 
 output of the TeraWatt UKCMER Grand Challenge project. Rev. 3.1 issued 2015. Available at http://www.masts.ac.uk/about/masts-publications/terawatt-publications/
 
 If you use it in a project that leads to a report or publication I would 
 appreciate (a) knowing about it; (b) acknowledgement; and, if appropriate, a citation for the following paper
 for which it was developed:
 
-Waldman S, Baston S, Nemalidinne R, Chatzirodou A, Venugopal V, Side J, ìImplementation of tidal turbines in MIKE 3 and Delft3D models of Pentland Firth & Orkney Watersî (2017)
+Waldman S, Baston S, Nemalidinne R, Chatzirodou A, Venugopal V, Side J, ‚ÄúImplementation of tidal turbines in MIKE 3 and Delft3D models of Pentland Firth & Orkney Waters‚Äù (2017)
 Ocean & Coastal Management. http://dx.doi.org/10.1016/j.ocecoaman.2017.04.015
 
 Limitations:
@@ -25,4 +25,4 @@ Improvements to this script are welcome. The latest version may be found at http
 
 -Simon Waldman.
 
-Address for correspondance or queries: smw13@hw.ac.uk
+Address for correspondance or queries: simon@simonwaldman.me.uk
